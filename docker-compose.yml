@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    container_name: promptguard_api
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://ollama:11434/api/generate
+      - OLLAMA_MODEL=llama3
+      - LOG_PATH=/app/logs/events.json
+    volumes:
+      - logs_volume:/app/logs
+      - ./chroma_db:/app/chroma_db
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: promptguard_ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://fastapi:8000
+      - LOG_PATH=/app/logs/events.json
+    volumes:
+      - logs_volume:/app/logs
+    depends_on:
+      - fastapi
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  logs_volume:
