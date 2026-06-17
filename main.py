@@ -85,7 +85,10 @@ def chat(request: Request, data: ChatRequest):
         })
         return {"status": "allowed", "protection_enabled": False, "response": llm_response}
 
-    result = evaluate_prompt(data.prompt)
+    # Use result from middleware if available, otherwise evaluate
+    result = getattr(request.state, 'prompt_evaluation', None)
+    if result is None:
+        result = evaluate_prompt(data.prompt)
 
     log_entry = {
         "timestamp": timestamp,
